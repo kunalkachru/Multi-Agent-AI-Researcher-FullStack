@@ -340,7 +340,14 @@ def _build_report(
     web_count = len(web_results) if web_results else 0
 
     if llm_summary:
-        sections.append(llm_summary)
+        # If the LLM included its own "Executive Summary" heading, strip it so we don't repeat titles.
+        cleaned = llm_summary.lstrip()
+        first_newline = cleaned.find("\n")
+        first_line = cleaned if first_newline == -1 else cleaned[:first_newline]
+        if first_line.strip().lower().startswith("executive summary"):
+            cleaned = cleaned[first_newline + 1 :] if first_newline != -1 else ""
+            cleaned = cleaned.lstrip()
+        sections.append(cleaned)
         sections.append("")
         # Add a stats line
         sections.append(
