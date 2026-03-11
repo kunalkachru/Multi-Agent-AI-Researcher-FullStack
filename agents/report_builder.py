@@ -142,20 +142,30 @@ def _generate_llm_summary(query: str, chunks: List[dict], web_results: List[dict
     if not source_text.strip():
         return ""
 
-    prompt = f"""You are a research analyst. Based on the following source material, write a concise Executive Summary (3-5 paragraphs) answering this research query:
+    prompt = f"""You are a senior research analyst. Based on the following source material, write a clear, structured Executive Summary answering this research query:
 
 **Research Query:** {query}
 
 **Source Material:**
 {source_text}
 
-Write a clear, factual summary that:
-1. Directly addresses the research query
-2. Synthesizes key findings from the sources
-3. Notes any important caveats or limitations
-4. Is written in professional research report style
+Write the Executive Summary in **well-structured markdown**, following this shape:
 
-Do NOT mention RAG, LLMs, embeddings, or vector databases unless the query is specifically about those topics. Focus entirely on the research topic."""
+1. 2–3 short paragraphs that:
+   - Directly answer the research question
+   - Synthesize the most important findings
+   - Note any important caveats or limitations
+
+2. A short bulleted list titled **"Key Points"** with 3–5 bullets. Each bullet should be:
+   - One sentence
+   - Decision-focused
+   - Grounded in the sources (not speculation)
+
+Style guidelines:
+- Be concise but information-dense.
+- Do NOT mention RAG, LLMs, embeddings, or vector databases unless the query is explicitly about those topics.
+- Do NOT describe your own process; just present the conclusions.
+- Keep everything focused on the research topic, not on AI or tooling."""
 
     model = context.get("llm_model", config.LLM_MODEL)
     reply, usage = chat_completion_with_usage(
@@ -189,7 +199,9 @@ def _generate_llm_insights(
     for c in claims[:8]:
         claims_text += f"- {c['claim'][:150]}\n"
 
-    prompt = f"""Based on the following source material about "{query}", list exactly 5 key insights. Each insight should be one clear sentence that a decision-maker would find valuable.
+    prompt = f"""You are writing board-level insights about this research topic: "{query}".
+
+Use the following source material and extracted claims to derive the **5 most important, decision-ready insights**:
 
 **Source Material:**
 {source_text}
@@ -197,7 +209,16 @@ def _generate_llm_insights(
 **Extracted Claims:**
 {claims_text}
 
-Output exactly 5 insights, one per line. No numbering, no bullets, just the insight text. Focus on the research topic "{query}" — not on AI technology unless the query is about AI."""
+Output format (very strict):
+- Exactly 5 lines
+- Each line is ONE complete sentence insight
+- No numbering, no bullets, no labels, no markdown headings
+- Each insight should:
+  - Stand alone (can be read out of context)
+  - Be specific and actionable
+  - Refer implicitly to the topic "{query}" (without generic phrases like "this topic")
+
+Do not talk about RAG, LLMs, or embeddings; focus only on the subject matter."""
 
     model = context.get("llm_model", config.LLM_MODEL)
     reply, usage = chat_completion_with_usage(
@@ -240,14 +261,29 @@ def _generate_llm_evidence_assessment(
 
     claims_text = "\n".join(f"- {c['claim'][:120]}" for c in claims[:8])
 
-    prompt = f"""In 2-3 sentences, summarize the overall quality and reliability of evidence found for the research topic: "{query}".
+    prompt = f"""You are assessing the strength of evidence for the research topic: "{query}".
 
-Stats: {len(claims)} claims extracted, {verified} verified, {unverified} unverified, {web_count} web sources consulted.
+Use these high-level stats and top claims to write a short, structured evaluation:
+
+Stats: {len(claims)} claims extracted, {verified} verified or partially verified, {unverified} unverified or disputed, {web_count} web sources consulted.
 
 Top claims:
 {claims_text}
 
-Be specific about the topic "{query}". Do NOT mention RAG, embeddings, or AI technology unless the query is about those."""
+Write your answer in markdown with this shape:
+
+1. One concise paragraph summarizing:
+   - Overall strength of the evidence (e.g. strong / mixed / weak)
+   - Whether the claims broadly support or challenge the topic
+
+2. A bulleted list titled **"Evidence Notes"** with 2–4 bullets highlighting:
+   - Any major limitations or biases in the evidence
+   - Important nuances (e.g. results only apply to certain populations, doses, timeframes)
+
+Guidelines:
+- Be specific about "{query}".
+- Do NOT mention RAG, embeddings, or AI models.
+- Keep the whole section under ~150–200 words."""
 
     model = context.get("llm_model", config.LLM_MODEL)
     reply, usage = chat_completion_with_usage(
