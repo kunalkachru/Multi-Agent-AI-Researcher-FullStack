@@ -17,7 +17,7 @@ from __future__ import annotations
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 import config
-from llm import chat_completion_with_usage, is_available as llm_available
+from llm import chat_completion_with_usage
 
 
 def run(context: Dict[str, Any]) -> Dict[str, Any]:
@@ -133,7 +133,9 @@ def _gather_source_text(chunks: List[dict], web_results: List[dict], max_chars: 
 
 def _generate_llm_summary(query: str, chunks: List[dict], web_results: List[dict], context: Dict[str, Any]) -> str:
     """Use LLM to generate an Executive Summary about the actual research topic."""
-    if not llm_available():
+    # Prefer a per-run key from context, then fall back to env-based key.
+    effective_key = (context.get("openrouter_api_key") or config.OPENROUTER_API_KEY or "").strip()
+    if not effective_key:
         return ""
 
     source_text = _gather_source_text(chunks, web_results)
@@ -156,13 +158,12 @@ Write a clear, factual summary that:
 Do NOT mention RAG, LLMs, embeddings, or vector databases unless the query is specifically about those topics. Focus entirely on the research topic."""
 
     model = context.get("llm_model", config.LLM_MODEL)
-    api_key = context.get("openrouter_api_key")
     reply, usage = chat_completion_with_usage(
         messages=[{"role": "user", "content": prompt}],
         max_tokens=800,
         temperature=0.3,
         model=model,
-        api_key=api_key,
+        api_key=effective_key,
     )
     if usage:
         u = context.setdefault("llm_usage", {"prompt_tokens": 0, "completion_tokens": 0})
@@ -175,7 +176,8 @@ def _generate_llm_insights(
     query: str, chunks: List[dict], web_results: List[dict], claims: List[dict], context: Dict[str, Any]
 ) -> List[str]:
     """Use LLM to generate Key Insights about the actual research topic."""
-    if not llm_available():
+    effective_key = (context.get("openrouter_api_key") or config.OPENROUTER_API_KEY or "").strip()
+    if not effective_key:
         return []
 
     source_text = _gather_source_text(chunks, web_results, max_chars=3000)
@@ -198,13 +200,12 @@ def _generate_llm_insights(
 Output exactly 5 insights, one per line. No numbering, no bullets, just the insight text. Focus on the research topic "{query}" — not on AI technology unless the query is about AI."""
 
     model = context.get("llm_model", config.LLM_MODEL)
-    api_key = context.get("openrouter_api_key")
     reply, usage = chat_completion_with_usage(
         messages=[{"role": "user", "content": prompt}],
         max_tokens=500,
         temperature=0.3,
         model=model,
-        api_key=api_key,
+        api_key=effective_key,
     )
     if usage:
         u = context.setdefault("llm_usage", {"prompt_tokens": 0, "completion_tokens": 0})
@@ -229,7 +230,8 @@ def _generate_llm_evidence_assessment(
     query: str, claims: List[dict], fact_results: List[dict], web_results: List[dict], context: Dict[str, Any]
 ) -> str:
     """Use LLM to summarize evidence quality for the research topic."""
-    if not llm_available() or not claims:
+    effective_key = (context.get("openrouter_api_key") or config.OPENROUTER_API_KEY or "").strip()
+    if not effective_key or not claims:
         return ""
 
     verified = sum(1 for r in fact_results if r.get("verdict") in ("verified", "partially_verified"))
@@ -248,13 +250,12 @@ Top claims:
 Be specific about the topic "{query}". Do NOT mention RAG, embeddings, or AI technology unless the query is about those."""
 
     model = context.get("llm_model", config.LLM_MODEL)
-    api_key = context.get("openrouter_api_key")
     reply, usage = chat_completion_with_usage(
         messages=[{"role": "user", "content": prompt}],
         max_tokens=250,
         temperature=0.3,
         model=model,
-        api_key=api_key,
+        api_key=effective_key,
     )
     if usage:
         u = context.setdefault("llm_usage", {"prompt_tokens": 0, "completion_tokens": 0})
