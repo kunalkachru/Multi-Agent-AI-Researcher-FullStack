@@ -1,0 +1,38 @@
+version: "3.9"
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: astraeus-api
+    ports:
+      - "8765:8765"
+    env_file:
+      - .env
+    volumes:
+      - ./data/chroma_db:/app/data/chroma_db
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        VITE_API_BASE: "http://localhost:8765"
+    container_name: astraeus-frontend
+    depends_on:
+      - api
+    ports:
+      - "4173:80"
+
+  streamlit:
+    build:
+      context: .
+      dockerfile: Dockerfile.streamlit
+    container_name: astraeus-streamlit
+    env_file:
+      - .env
+    volumes:
+      - ./data/chroma_db:/app/data/chroma_db
+    ports:
+      - "8502:8501"
