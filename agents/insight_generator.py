@@ -17,7 +17,8 @@ from typing import Dict, Any, List
 import re
 import json
 from collections import Counter
-from llm import chat_completion, is_available as llm_available
+import config
+from llm import chat_completion_with_usage, is_available as llm_available
 
 
 def run(context: Dict[str, Any]) -> Dict[str, Any]:
@@ -43,10 +44,10 @@ def run(context: Dict[str, Any]) -> Dict[str, Any]:
 
     # ── LLM-powered analysis ──────────────────────────────────────────
     if llm_available() and source_text.strip():
-        themes = _llm_themes(query, source_text, claims)
-        gaps = _llm_gaps(query, source_text, claims, fact_results)
-        hypotheses = _llm_hypotheses(query, source_text, claims)
-        key_insights = _llm_key_insights(query, source_text, claims, fact_results)
+        themes = _llm_themes(query, source_text, claims, context)
+        gaps = _llm_gaps(query, source_text, claims, fact_results, context)
+        hypotheses = _llm_hypotheses(query, source_text, claims, context)
+        key_insights = _llm_key_insights(query, source_text, claims, fact_results, context)
     else:
         # Fallback: basic stats-only analysis
         themes = _fallback_themes(claims)
@@ -109,7 +110,7 @@ def _claims_text(claims: List[dict], limit: int = 10) -> str:
 # LLM-powered functions
 # ══════════════════════════════════════════════════════════════════════
 
-def _llm_themes(query: str, source_text: str, claims: List[dict]) -> List[dict]:
+def _llm_themes(query: str, source_text: str, claims: List[dict], context: Dict[str, Any]) -> List[dict]:
     """Use LLM to identify thematic clusters relevant to the actual query."""
     prompt = f"""You are a research analyst. Given the following source material about "{query}", identify 3-5 key thematic areas.
 
@@ -128,7 +129,13 @@ For each theme, output a JSON array like:
 Use "strong" if well-supported, "moderate" if partially supported, "emerging" if early evidence only.
 Focus ONLY on themes related to "{query}". Output ONLY the JSON array, nothing else."""
 
-    reply = chat_completion(messages=[{"role": "user", "content": prompt}], max_tokens=600, temperature=0.3)
+    model = context.get("llm_model", config.LLM_MODEL)
+    api_key = context.get("openrouter_api_key")
+    reply, usage = chat_completion_with_usage(messages=[{"role": "user", "content": prompt}], max_tokens=600, temperature=0.3, model=model, api_key=api_key)
+    if usage:
+        u = context.setdefault("llm_usage", {"prompt_tokens": 0, "completion_tokens": 0})
+        u["prompt_tokens"] += usage.get("prompt_tokens", 0)
+        u["completion_tokens"] += usage.get("completion_tokens", 0)
     if not reply:
         return _fallback_themes(claims)
 
@@ -154,7 +161,7 @@ Focus ONLY on themes related to "{query}". Output ONLY the JSON array, nothing e
     return _fallback_themes(claims)
 
 
-def _llm_gaps(query: str, source_text: str, claims: List[dict], fact_results: List[dict]) -> List[str]:
+def _llm_gaps(query: str, source_text: str, claims: List[dict], fact_results: List[dict], context: Dict[str, Any]) -> List[str]:
     """Use LLM to identify knowledge gaps specific to the query topic."""
     unverified = sum(1 for r in fact_results if r.get("verdict") in ("unverified", "disputed"))
 
@@ -168,7 +175,13 @@ def _llm_gaps(query: str, source_text: str, claims: List[dict], fact_results: Li
 List 3-5 specific knowledge gaps or areas where the evidence is weak or missing for this topic.
 Output one gap per line, no numbering. Focus on "{query}" specifically."""
 
-    reply = chat_completion(messages=[{"role": "user", "content": prompt}], max_tokens=400, temperature=0.3)
+    model = context.get("llm_model", config.LLM_MODEL)
+    api_key = context.get("openrouter_api_key")
+    reply, usage = chat_completion_with_usage(messages=[{"role": "user", "content": prompt}], max_tokens=400, temperature=0.3, model=model, api_key=api_key)
+    if usage:
+        u = context.setdefault("llm_usage", {"prompt_tokens": 0, "completion_tokens": 0})
+        u["prompt_tokens"] += usage.get("prompt_tokens", 0)
+        u["completion_tokens"] += usage.get("completion_tokens", 0)
     if not reply:
         return _fallback_gaps(claims, fact_results)
 
@@ -182,7 +195,7 @@ Output one gap per line, no numbering. Focus on "{query}" specifically."""
     return gaps[:5] if gaps else _fallback_gaps(claims, fact_results)
 
 
-def _llm_hypotheses(query: str, source_text: str, claims: List[dict]) -> List[str]:
+def _llm_hypotheses(query: str, source_text: str, claims: List[dict], context: Dict[str, Any]) -> List[str]:
     """Use LLM to generate research hypotheses specific to the query topic."""
     prompt = f"""You are a research analyst. Based on evidence about "{query}":
 
@@ -193,7 +206,13 @@ Generate 3 research hypotheses or forward-looking predictions related to "{query
 Each should be a single sentence that a researcher could investigate further.
 Output one hypothesis per line, no numbering. Be specific to the topic."""
 
-    reply = chat_completion(messages=[{"role": "user", "content": prompt}], max_tokens=400, temperature=0.4)
+    model = context.get("llm_model", config.LLM_MODEL)
+    api_key = context.get("openrouter_api_key")
+    reply, usage = chat_completion_with_usage(messages=[{"role": "user", "content": prompt}], max_tokens=400, temperature=0.4, model=model, api_key=api_key)
+    if usage:
+        u = context.setdefault("llm_usage", {"prompt_tokens": 0, "completion_tokens": 0})
+        u["prompt_tokens"] += usage.get("prompt_tokens", 0)
+        u["completion_tokens"] += usage.get("completion_tokens", 0)
     if not reply:
         return _fallback_hypotheses(claims)
 
@@ -207,7 +226,7 @@ Output one hypothesis per line, no numbering. Be specific to the topic."""
     return hypos[:4] if hypos else _fallback_hypotheses(claims)
 
 
-def _llm_key_insights(query: str, source_text: str, claims: List[dict], fact_results: List[dict]) -> List[str]:
+def _llm_key_insights(query: str, source_text: str, claims: List[dict], fact_results: List[dict], context: Dict[str, Any]) -> List[str]:
     """Use LLM to generate key insights specific to the query topic."""
     verified = sum(1 for r in fact_results if r.get("verdict") in ("verified", "partially_verified"))
 
@@ -221,7 +240,13 @@ def _llm_key_insights(query: str, source_text: str, claims: List[dict], fact_res
 List 4-5 key takeaways that a decision-maker would find most valuable about "{query}".
 One insight per line, no numbering. Be specific and actionable."""
 
-    reply = chat_completion(messages=[{"role": "user", "content": prompt}], max_tokens=500, temperature=0.3)
+    model = context.get("llm_model", config.LLM_MODEL)
+    api_key = context.get("openrouter_api_key")
+    reply, usage = chat_completion_with_usage(messages=[{"role": "user", "content": prompt}], max_tokens=500, temperature=0.3, model=model, api_key=api_key)
+    if usage:
+        u = context.setdefault("llm_usage", {"prompt_tokens": 0, "completion_tokens": 0})
+        u["prompt_tokens"] += usage.get("prompt_tokens", 0)
+        u["completion_tokens"] += usage.get("completion_tokens", 0)
     if not reply:
         return _fallback_key_insights(claims, fact_results)
 

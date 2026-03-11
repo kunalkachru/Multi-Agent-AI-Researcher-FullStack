@@ -16,7 +16,8 @@ from __future__ import annotations
 from typing import Dict, Any, List
 import re
 import json
-from llm import chat_completion, is_available as llm_available
+import config
+from llm import chat_completion_with_usage, is_available as llm_available
 
 
 def run(context: Dict[str, Any]) -> Dict[str, Any]:
@@ -32,7 +33,7 @@ def run(context: Dict[str, Any]) -> Dict[str, Any]:
     query = context.get("query", "")
 
     # ── Claim extraction (LLM-first, regex fallback) ───────────────
-    claims = _extract_claims(chunks, query)
+    claims = _extract_claims(chunks, query, context)
 
     # ── Contradiction detection ────────────────────────────────────
     contradictions = _detect_contradictions(claims)
@@ -62,13 +63,13 @@ def run(context: Dict[str, Any]) -> Dict[str, Any]:
 # Claim Extraction
 # ══════════════════════════════════════════════════════════════════════
 
-def _extract_claims(chunks: List[dict], query: str) -> List[dict]:
+def _extract_claims(chunks: List[dict], query: str, context: Dict[str, Any]) -> List[dict]:
     """
     Extract factual claims from chunks. Tries the LLM first for
     topic-relevant extraction; falls back to regex heuristics.
     """
     if llm_available() and chunks:
-        llm_claims = _extract_claims_via_llm(chunks, query)
+        llm_claims = _extract_claims_via_llm(chunks, query, context)
         if llm_claims:
             return llm_claims
 
@@ -76,7 +77,7 @@ def _extract_claims(chunks: List[dict], query: str) -> List[dict]:
     return _extract_claims_regex(chunks)
 
 
-def _extract_claims_via_llm(chunks: List[dict], query: str) -> List[dict]:
+def _extract_claims_via_llm(chunks: List[dict], query: str, context: Dict[str, Any]) -> List[dict]:
     """Use LLM to extract claims that are relevant to the research query."""
     # Build chunk text for prompt
     chunk_summaries = []
@@ -123,11 +124,19 @@ Rules:
 
 Output ONLY the JSON array."""
 
-    reply = chat_completion(
+    model = context.get("llm_model", config.LLM_MODEL)
+    api_key = context.get("openrouter_api_key")
+    reply, usage = chat_completion_with_usage(
         messages=[{"role": "user", "content": prompt}],
         max_tokens=800,
         temperature=0.2,
+        model=model,
+        api_key=api_key,
     )
+    if usage:
+        u = context.setdefault("llm_usage", {"prompt_tokens": 0, "completion_tokens": 0})
+        u["prompt_tokens"] += usage.get("prompt_tokens", 0)
+        u["completion_tokens"] += usage.get("completion_tokens", 0)
     if not reply:
         return []
 

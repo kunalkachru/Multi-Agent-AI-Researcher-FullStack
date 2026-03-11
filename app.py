@@ -1,5 +1,5 @@
 """
-Astraeus — Multi-Agent AI Deep Researcher
+Astraeus 2.0 — Multi-Agent AI Deep Researcher
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Streamlit Application · 6 Agents · RAG-Powered
 
@@ -48,6 +48,8 @@ if "pipeline_ran" not in st.session_state:
     st.session_state.pipeline_ran = False
 if "corpus_loaded" not in st.session_state:
     st.session_state.corpus_loaded = False
+if "selected_llm_model" not in st.session_state:
+    st.session_state.selected_llm_model = config.LLM_MODEL
 
 # ══════════════════════════════════════════════════════════════════════
 # Load demo corpus on first run
@@ -75,6 +77,32 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
+# ══════════════════════════════════════════════════════════════════════
+# HERO & QUERY CHIPS
+# ══════════════════════════════════════════════════════════════════════
+st.markdown("""
+<div class="hero-section">
+    <p class="hero-text">Enter a research question and our 6-agent pipeline will retrieve, analyze, fact-check, and produce a cited report in under 2 minutes.</p>
+</div>
+""", unsafe_allow_html=True)
+
+# One-click query chips — pre-fill only (no auto-launch; user can edit or Launch)
+DEMO_QUERIES = [
+    ("How does RAG reduce LLM hallucinations?", "RAG & hallucinations"),
+    ("Compare vector databases for semantic search", "Vector DBs comparison"),
+    ("What are multi-agent AI systems?", "Multi-agent AI"),
+    ("Best practices for chunking in RAG", "RAG chunking"),
+    ("Query expansion techniques for retrieval", "Query expansion"),
+]
+chip_cols = st.columns(5)
+for i, (full_query, label) in enumerate(DEMO_QUERIES):
+    with chip_cols[i]:
+        if st.button(f"✨ {label}", key=f"chip_{i}", use_container_width=True):
+            st.session_state["research_query"] = full_query
+            st.rerun()
+
+st.markdown("<div style='height:8px;'></div>", unsafe_allow_html=True)
+
 # ── Query input row ───────────────────────────────────────────────────
 col_input, col_btn, col_reset = st.columns([6, 1.2, 1])
 
@@ -100,18 +128,79 @@ if reset:
 # ── Settings & Metrics bar ────────────────────────────────────────────
 with st.expander("⚙️ Settings & Metrics", expanded=False):
     from llm import is_available as llm_available
+    # Model selection dropdown
+    model_options = [f"{m['name']} · ${m['input_per_1m']}/{m['output_per_1m']} per 1M" for m in config.LLM_MODELS]
+    model_ids = [m["id"] for m in config.LLM_MODELS]
+    current_id = st.session_state.get("selected_llm_model", config.LLM_MODEL)
+    try:
+        default_idx = model_ids.index(current_id) if current_id in model_ids else 0
+    except (ValueError, IndexError):
+        default_idx = 0
+    sel_idx = st.selectbox(
+        "LLM Model",
+        range(len(model_options)),
+        format_func=lambda i: model_options[i],
+        index=default_idx,
+    )
+    if sel_idx is not None:
+        st.session_state.selected_llm_model = model_ids[sel_idx]
+
     s_col1, s_col2, s_col3, s_col4, s_col5 = st.columns(5)
     with s_col1:
         render_metric_card("Documents Indexed", str(st.session_state.get("doc_count", 0)), "📚")
     with s_col2:
         render_metric_card("Embedding Model", config.EMBEDDING_MODEL, "🧠")
     with s_col3:
-        llm_label = f"OpenRouter · {config.LLM_MODEL}" if llm_available() else "Not configured"
-        render_metric_card("LLM", llm_label[:20] + "…" if len(llm_label) > 20 else llm_label, "🤖")
+        sel_name = next((m["name"] for m in config.LLM_MODELS if m["id"] == st.session_state.selected_llm_model), st.session_state.selected_llm_model)
+        llm_label = f"OpenRouter · {sel_name}" if llm_available() else "Not configured"
+        render_metric_card("LLM", llm_label[:22] + "…" if len(llm_label) > 22 else llm_label, "🤖")
     with s_col4:
         render_metric_card("Top-K Results", str(config.TOP_K_RESULTS), "🎯")
     with s_col5:
         render_metric_card("Query Expansions", str(config.MAX_QUERY_EXPANSIONS), "🔀")
+
+# ── Add Documents (upload single or multiple files) ─────────────────────
+with st.expander("📤 Add Documents to Knowledge Base", expanded=False):
+    st.caption("Upload .txt, .pdf, or .docx files. They will be parsed, chunked, embedded, and indexed for retrieval.")
+    uploaded_files = st.file_uploader(
+        "Select 1 or more files",
+        type=["txt", "pdf", "docx"],
+        accept_multiple_files=True,
+        key="doc_uploader",
+        label_visibility="collapsed",
+    )
+    # Placeholder for completion message — shows above the Index Documents button
+    msg_placeholder = st.empty()
+    if st.session_state.get("index_completed_message"):
+        with msg_placeholder.container():
+            st.success(st.session_state.pop("index_completed_message"))
+        if hasattr(st, "toast"):
+            st.toast("Document indexing completed.", icon="✅")
+    col_upload_btn, col_upload_status = st.columns([1, 3])
+    with col_upload_btn:
+        index_btn = st.button("Index Documents", type="secondary", disabled=not uploaded_files)
+    if index_btn and uploaded_files:
+        from rag.file_indexer import index_uploaded_files
+        from rag.vector_store import get_collection_count
+
+        with st.spinner("Parsing, chunking, and indexing..."):
+            result = index_uploaded_files(list(uploaded_files))
+        if result["total_chunks"] > 0:
+            st.session_state.doc_count = get_collection_count()
+            st.session_state.index_completed_message = (
+                "**Document indexing completed.** "
+                f"Indexed {result['success']} file(s), {result['total_chunks']} chunks added. "
+                f"Total in store: {st.session_state.doc_count}"
+            )
+            st.rerun()  # refresh UI, clear uploader, show message above button
+        if result["failed"] > 0:
+            st.warning(f"{result['failed']} file(s) failed.")
+            for err in result["errors"]:
+                st.caption(f"• {err}")
+        if result["total_chunks"] == 0 and result["success"] == 0 and result["failed"] > 0:
+            st.error("No files could be indexed. Check format (.txt, .pdf, .docx) and that files contain extractable text.")
+    elif index_btn and not uploaded_files:
+        st.info("Select 1 or more files first.")
 
 # ══════════════════════════════════════════════════════════════════════
 # RESEARCH PIPELINE SECTION
@@ -149,7 +238,12 @@ if launch and query.strip():
     # ── Initialise ────────────────────────────────────────────────────
     pipeline_state.is_running = True
     pipeline_state.pipeline_start_time = time.time()
-    pipeline_state.context = {"query": query.strip()}
+    selected_model = st.session_state.get("selected_llm_model") or config.LLM_MODEL
+    pipeline_state.context = {
+        "query": query.strip(),
+        "llm_model": selected_model,
+        "llm_usage": {"prompt_tokens": 0, "completion_tokens": 0},
+    }
     _repaint()                       # all cards grey / not-started
 
     # ── Walk through each agent sequentially ──────────────────────────
@@ -251,6 +345,14 @@ elif launch and not query.strip():
 if st.session_state.pipeline_ran and pipeline_state.is_complete:
     context = pipeline_state.context
 
+    # ── Completion celebration banner ─────────────────────────────────
+    st.markdown(
+        '<div class="pipeline-complete-banner">'
+        '<span class="banner-icon">✅</span><span class="banner-text">Research complete — Your report is ready below</span>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
     # ── Summary metrics ───────────────────────────────────────────────
     st.markdown("---")
     st.markdown("### 📊 Pipeline Results")
@@ -316,13 +418,68 @@ if st.session_state.pipeline_ran and pipeline_state.is_complete:
         st.markdown(report)
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # Download button
-        st.download_button(
-            label="📥 Download Report (Markdown)",
-            data=report,
-            file_name="research_report.md",
-            mime="text/markdown",
-        )
+        # Download buttons (Markdown + PDF)
+        dl_col1, dl_col2 = st.columns(2)
+        with dl_col1:
+            st.download_button(
+                label="📥 Download Report (Markdown)",
+                data=report,
+                file_name="research_report.md",
+                mime="text/markdown",
+                key="download_report_md",
+            )
+        with dl_col2:
+            try:
+                from utils.pdf_export import (
+                    get_pdf_export_status,
+                    markdown_to_pdf_bytes,
+                    sanitize_filename_for_pdf,
+                )
+                pdf_available, pdf_error = get_pdf_export_status()
+                if pdf_available:
+                    query_text = context.get("query", "")
+                    pdf_bytes = markdown_to_pdf_bytes(report, title=(query_text[:80] if query_text else "Research Report"))
+                    pdf_name = sanitize_filename_for_pdf(query_text) + "_report.pdf" if query_text.strip() else "research_report.pdf"
+                    st.download_button(
+                        label="📥 Download Report (PDF)",
+                        data=pdf_bytes,
+                        file_name=pdf_name,
+                        mime="application/pdf",
+                        key="download_report_pdf",
+                    )
+                else:
+                    err_msg = pdf_error or "PDF libraries not available"
+                    st.caption(f"PDF export unavailable. Run: pip install xhtml2pdf")
+                    with st.expander("Details", expanded=False):
+                        st.code(err_msg)
+            except Exception as e:
+                st.caption(f"PDF export error. Try restarting the app.")
+                with st.expander("Details", expanded=False):
+                    st.code(str(e))
+
+        # ── LLM Usage ─────────────────────────────────────────────────
+        llm_usage = context.get("llm_usage", {})
+        prompt_tok = llm_usage.get("prompt_tokens", 0)
+        compl_tok = llm_usage.get("completion_tokens", 0)
+        total_tok = prompt_tok + compl_tok
+        model_id = context.get("llm_model", config.LLM_MODEL)
+        model_cfg = next((m for m in config.LLM_MODELS if m["id"] == model_id), None)
+        est_cost = None
+        if model_cfg and total_tok > 0:
+            est_cost = (prompt_tok / 1_000_000 * model_cfg["input_per_1m"]) + (compl_tok / 1_000_000 * model_cfg["output_per_1m"])
+
+        with st.expander("💰 LLM Usage", expanded=True):
+            u1, u2, u3, u4 = st.columns(4)
+            with u1:
+                render_metric_card("Prompt Tokens", f"{prompt_tok:,}", "📥")
+            with u2:
+                render_metric_card("Completion Tokens", f"{compl_tok:,}", "📤")
+            with u3:
+                render_metric_card("Total Tokens", f"{total_tok:,}", "📊")
+            with u4:
+                cost_str = f"~${est_cost:.6f}" if est_cost is not None else "—"
+                render_metric_card("Est. Cost (USD)", cost_str, "💵")
+            st.caption("Pricing approximate; see [openrouter.ai/pricing](https://openrouter.ai/pricing)")
     else:
         st.info("No report generated. Try running the pipeline again.")
 

@@ -1,5 +1,5 @@
 """
-Demo corpus for Astraeus — Multi-Agent AI Deep Researcher.
+Demo corpus for Astraeus 2.0 — Multi-Agent AI Deep Researcher.
 Contains sample research documents about AI and machine learning
 so the demo flow has real content to work with.
 

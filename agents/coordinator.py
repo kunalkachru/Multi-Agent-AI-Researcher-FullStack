@@ -15,7 +15,7 @@ from __future__ import annotations
 from typing import Dict, Any, List
 import re
 import config
-from llm import chat_completion, is_available
+from llm import chat_completion_with_usage, is_available
 
 
 def run(context: Dict[str, Any]) -> Dict[str, Any]:
@@ -34,7 +34,7 @@ def run(context: Dict[str, Any]) -> Dict[str, Any]:
     query_analysis = _analyze_query(query)
 
     # ── Query expansion ───────────────────────────────────────────────
-    expanded_queries = _expand_query(query, config.MAX_QUERY_EXPANSIONS)
+    expanded_queries = _expand_query(query, config.MAX_QUERY_EXPANSIONS, context)
 
     # ── Routing (single vector DB for v1) ─────────────────────────────
     routing_hint = "vector_store"  # only option in v1
@@ -93,14 +93,14 @@ def _analyze_query(query: str) -> Dict[str, Any]:
     }
 
 
-def _expand_query(query: str, n_expansions: int) -> List[str]:
+def _expand_query(query: str, n_expansions: int, context: Dict[str, Any] | None = None) -> List[str]:
     """
     Generate query variants for multi-query retrieval.
     Uses OpenRouter LLM when available; otherwise template-based expansion.
     """
     # Try OpenRouter first
     if is_available():
-        llm_queries = _expand_query_via_llm(query, n_expansions)
+        llm_queries = _expand_query_via_llm(query, n_expansions, context)
         if llm_queries:
             return llm_queries
 
@@ -121,7 +121,7 @@ def _expand_query(query: str, n_expansions: int) -> List[str]:
     return expansions[:n_expansions]
 
 
-def _expand_query_via_llm(query: str, n_expansions: int) -> List[str]:
+def _expand_query_via_llm(query: str, n_expansions: int, context: Dict[str, Any] | None = None) -> List[str]:
     """Use OpenRouter to generate alternative search queries."""
     prompt = f"""You are a research query expander. Given the following research question, output exactly {n_expansions} alternative phrasings that would help retrieve relevant documents from a search engine. Each line must be one short search query (no numbering, no bullets). Include the original question as the first line.
 
@@ -129,11 +129,19 @@ Original question: {query}
 
 Alternative search queries (one per line):"""
 
-    reply = chat_completion(
+    model = context.get("llm_model", config.LLM_MODEL) if context else config.LLM_MODEL
+    api_key = context.get("openrouter_api_key") if context else None
+    reply, usage = chat_completion_with_usage(
         messages=[{"role": "user", "content": prompt}],
         max_tokens=300,
         temperature=0.4,
+        model=model,
+        api_key=api_key,
     )
+    if usage and context is not None:
+        u = context.setdefault("llm_usage", {"prompt_tokens": 0, "completion_tokens": 0})
+        u["prompt_tokens"] += usage.get("prompt_tokens", 0)
+        u["completion_tokens"] += usage.get("completion_tokens", 0)
     if not reply:
         return []
 

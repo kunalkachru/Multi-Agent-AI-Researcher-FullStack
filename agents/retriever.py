@@ -25,42 +25,48 @@ def run(context: Dict[str, Any]) -> Dict[str, Any]:
     Input context keys:
       - expanded_queries: List[str]
       - query: str
+      - search_type: "both" | "rag_only" | "web_only" (default "both")
 
     Output added to context:
-      - retrieved_chunks: List[dict]       (from vector DB / embeddings)
+      - retrieved_chunks: List[dict]       (from vector DB / embeddings and/or web)
       - web_results: List[dict]            (from Tavily web search)
       - retrieval_metadata: dict
       - query_embedding: list
     """
     expanded_queries = context.get("expanded_queries", [context.get("query", "")])
     original_query = context.get("query", "")
+    search_type = (context.get("search_type") or "both").strip().lower()
+    if search_type not in ("both", "rag_only", "web_only"):
+        search_type = "both"
 
     # ── Part 1: Embedding retrieval (vector DB) ───────────────────────
-    retrieval_result = multi_query_retrieval(
-        queries=expanded_queries,
-        top_k=config.TOP_K_RESULTS,
-    )
-
-    chunks = retrieval_result["chunks"]
-    stage_counts = retrieval_result["stage_counts"]
-    per_query_counts = retrieval_result["per_query_counts"]
+    chunks = []
+    stage_counts = {}
+    per_query_counts = {}
+    if search_type in ("both", "rag_only"):
+        retrieval_result = multi_query_retrieval(
+            queries=expanded_queries,
+            top_k=config.TOP_K_RESULTS,
+        )
+        chunks = retrieval_result["chunks"]
+        stage_counts = retrieval_result["stage_counts"]
+        per_query_counts = retrieval_result["per_query_counts"]
 
     # ── Part 2: Web search via Tavily ─────────────────────────────────
     web_results = []
-    if tavily_available():
-        web_results = multi_query_web_search(
-            queries=expanded_queries[:2],   # use top 2 queries to save API calls
-            max_results_per_query=3,
-        )
+    if search_type in ("both", "web_only"):
+        tavily_key = context.get("tavily_api_key") or (config.TAVILY_API_KEY if tavily_available() else None)
+        if tavily_key:
+            web_results = multi_query_web_search(
+                queries=expanded_queries[:2],   # use top 2 queries to save API calls
+                max_results_per_query=3,
+                api_key=tavily_key,
+            )
 
     # ── Get query embedding for visualization ─────────────────────────
     q_embedding = embed_query(original_query).tolist()
 
     # ── Convert web results into chunk-compatible format ─────────────
-    # So the analysis agents (Critical Analysis, Fact-Checker, etc.)
-    # can process web content the same way they process embedding chunks.
-    # We also compute embeddings for web snippets so they appear in the
-    # Embedding Space visualization alongside the vector DB docs.
     web_chunks = []
     web_texts = [w.get("snippet", "") for w in web_results if w.get("snippet", "").strip()]
     web_embeddings = []
@@ -85,13 +91,13 @@ def run(context: Dict[str, Any]) -> Dict[str, Any]:
             "is_web": True,
         })
 
-    # Merge: web chunks + embedding chunks = all chunks for analysis
-    all_chunks = web_chunks + chunks  # web first (more relevant for live topics)
+    # Merge: web chunks + embedding chunks = all chunks for analysis (both); or only one source
+    all_chunks = (web_chunks + chunks) if search_type == "both" else (web_chunks if search_type == "web_only" else chunks)
 
     # ── Build retriever output ────────────────────────────────────────
-    context["retrieved_chunks"] = all_chunks  # full set for analysis pipeline
-    context["embedding_chunks"] = chunks      # original vector DB chunks (for viz)
-    context["web_results"] = web_results      # raw web results (for report links)
+    context["retrieved_chunks"] = all_chunks
+    context["embedding_chunks"] = chunks
+    context["web_results"] = web_results
     context["retrieval_metadata"] = {
         "stage_counts": stage_counts,
         "per_query_counts": per_query_counts,

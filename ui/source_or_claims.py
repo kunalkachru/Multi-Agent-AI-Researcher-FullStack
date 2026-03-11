@@ -70,13 +70,13 @@ def render_claims_evidence(context: Dict[str, Any]):
         bar_width = int(score * 100)
 
         st.markdown(f"""
-        <div style="background:rgba(255,255,255,0.03);border-radius:12px;padding:12px;margin:8px 0;border-left:3px solid {bar_color};">
+        <div style="background:rgba(0,0,0,0.04);border-radius:12px;padding:12px;margin:8px 0;border-left:3px solid {bar_color};">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                <span style="font-size:0.85rem;font-weight:600;">{icon} {verdict.replace('_',' ').title()}</span>
-                <span style="font-size:0.75rem;color:#94a3b8;">Score: {score:.2f} | {evidence_type} | {supporting} supporting source(s)</span>
+                <span style="font-size:0.85rem;font-weight:600;color:#1e293b;">{icon} {verdict.replace('_',' ').title()}</span>
+                <span style="font-size:0.75rem;color:#64748b;">Score: {score:.2f} | {evidence_type} | {supporting} supporting source(s)</span>
             </div>
-            <div style="font-size:0.8rem;color:#cbd5e1;margin-bottom:8px;">{claim_text}</div>
-            <div style="background:rgba(255,255,255,0.1);border-radius:4px;height:6px;overflow:hidden;">
+            <div style="font-size:0.8rem;color:#475569;margin-bottom:8px;">{claim_text}</div>
+            <div style="background:rgba(0,0,0,0.08);border-radius:4px;height:6px;overflow:hidden;">
                 <div style="width:{bar_width}%;height:100%;background:{bar_color};border-radius:4px;transition:width 0.5s;"></div>
             </div>
         </div>
@@ -89,7 +89,7 @@ def render_claims_evidence(context: Dict[str, Any]):
                 strength = chain.get("strength", "unknown")
                 color = strength_colors.get(strength, "#6b7280")
                 st.markdown(f"""
-                <div style="border-left:3px solid {color};padding:8px 12px;margin:6px 0;font-size:0.8rem;">
+                <div style="border-left:3px solid {color};padding:8px 12px;margin:6px 0;font-size:0.8rem;color:#334155;background:rgba(0,0,0,0.02);border-radius:8px;">
                     <strong>{chain.get('claim', '')[:120]}</strong><br>
                     📎 Source: <code>{chain.get('source_id', '?')}</code> |
                     Confidence: {chain.get('confidence', 0)} |
@@ -122,17 +122,17 @@ def _render_verdict_donut(verdict_breakdown: Dict[str, int]):
         hole=0.55,
         marker=dict(colors=colors, line=dict(color='rgba(0,0,0,0.3)', width=2)),
         textinfo='label+percent',
-        textfont=dict(size=12, color='white'),
+        textfont=dict(size=12, color='#334155'),
     )])
 
     total = sum(values)
     fig.update_layout(
-        title=dict(text="Claim Verdicts", font=dict(size=13, color='#94a3b8')),
+        title=dict(text="Claim Verdicts", font=dict(size=13, color='#1e293b')),
         annotations=[dict(text=f"{total}<br>Claims", x=0.5, y=0.5, font_size=16,
-                         font_color='#94a3b8', showarrow=False)],
+                         font_color='#64748b', showarrow=False)],
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
-        font=dict(color='#94a3b8'),
+        font=dict(color='#475569'),
         height=300,
         margin=dict(l=20, r=20, t=40, b=20),
         showlegend=False,

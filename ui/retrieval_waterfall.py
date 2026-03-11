@@ -49,18 +49,18 @@ def render_retrieval_waterfall(context: Dict[str, Any]):
         x=stage_values,
         textinfo="value+percent initial",
         marker=dict(color=colors),
-        connector=dict(line=dict(color="rgba(255,255,255,0.1)", width=1)),
-        textfont=dict(size=13, color="white"),
+        connector=dict(line=dict(color="rgba(0,0,0,0.1)", width=1)),
+        textfont=dict(size=13, color="#334155"),
     ))
 
     fig.update_layout(
         title=dict(
             text="Retrieval Waterfall — From Queries to Final Chunks",
-            font=dict(size=14, color='#94a3b8'),
+            font=dict(size=14, color='#1e293b'),
         ),
-        plot_bgcolor='rgba(15, 23, 42, 0.8)',
+        plot_bgcolor='#ffffff',
         paper_bgcolor='rgba(0,0,0,0)',
-        font=dict(color='#94a3b8'),
+        font=dict(color='#475569'),
         height=350,
         margin=dict(l=20, r=20, t=60, b=20),
     )
@@ -96,14 +96,14 @@ def render_retrieval_waterfall(context: Dict[str, Any]):
             ),
             text=[f"{c} ({100*c/total:.0f}%)" for c in source_counts],
             textposition='auto',
-            textfont=dict(color='white', size=12),
+            textfont=dict(color='#334155', size=12),
         ))
 
         fig2.update_layout(
-            title=dict(text="Results by Source", font=dict(size=13, color='#94a3b8')),
-            plot_bgcolor='rgba(15, 23, 42, 0.8)',
+            title=dict(text="Results by Source", font=dict(size=13, color='#1e293b')),
+            plot_bgcolor='#ffffff',
             paper_bgcolor='rgba(0,0,0,0)',
-            font=dict(color='#94a3b8'),
+            font=dict(color='#475569'),
             height=200,
             margin=dict(l=20, r=20, t=40, b=20),
             xaxis=dict(showgrid=False),

@@ -16,7 +16,8 @@ Responsibilities:
 from __future__ import annotations
 from typing import Dict, Any, List, Optional
 from datetime import datetime
-from llm import chat_completion, is_available as llm_available
+import config
+from llm import chat_completion_with_usage, is_available as llm_available
 
 
 def run(context: Dict[str, Any]) -> Dict[str, Any]:
@@ -49,8 +50,8 @@ def run(context: Dict[str, Any]) -> Dict[str, Any]:
     all_chunks = context.get("retrieved_chunks", [])
 
     # ── Use LLM to generate content about the actual research topic ───
-    llm_summary = _generate_llm_summary(query, all_chunks, web_results)
-    llm_insights = _generate_llm_insights(query, all_chunks, web_results, claims)
+    llm_summary = _generate_llm_summary(query, all_chunks, web_results, context)
+    llm_insights = _generate_llm_insights(query, all_chunks, web_results, claims, context)
 
     # ── Build report ──────────────────────────────────────────────────
     report = _build_report(
@@ -69,6 +70,7 @@ def run(context: Dict[str, Any]) -> Dict[str, Any]:
         retriever_output=retriever_output,
         web_results=web_results,
         llm_summary=llm_summary,
+        context=context,
     )
 
     report_metadata = {
@@ -129,7 +131,7 @@ def _gather_source_text(chunks: List[dict], web_results: List[dict], max_chars: 
     return "\n".join(parts)
 
 
-def _generate_llm_summary(query: str, chunks: List[dict], web_results: List[dict]) -> str:
+def _generate_llm_summary(query: str, chunks: List[dict], web_results: List[dict], context: Dict[str, Any]) -> str:
     """Use LLM to generate an Executive Summary about the actual research topic."""
     if not llm_available():
         return ""
@@ -153,15 +155,24 @@ Write a clear, factual summary that:
 
 Do NOT mention RAG, LLMs, embeddings, or vector databases unless the query is specifically about those topics. Focus entirely on the research topic."""
 
-    return chat_completion(
+    model = context.get("llm_model", config.LLM_MODEL)
+    api_key = context.get("openrouter_api_key")
+    reply, usage = chat_completion_with_usage(
         messages=[{"role": "user", "content": prompt}],
         max_tokens=800,
         temperature=0.3,
-    ) or ""
+        model=model,
+        api_key=api_key,
+    )
+    if usage:
+        u = context.setdefault("llm_usage", {"prompt_tokens": 0, "completion_tokens": 0})
+        u["prompt_tokens"] += usage.get("prompt_tokens", 0)
+        u["completion_tokens"] += usage.get("completion_tokens", 0)
+    return reply or ""
 
 
 def _generate_llm_insights(
-    query: str, chunks: List[dict], web_results: List[dict], claims: List[dict]
+    query: str, chunks: List[dict], web_results: List[dict], claims: List[dict], context: Dict[str, Any]
 ) -> List[str]:
     """Use LLM to generate Key Insights about the actual research topic."""
     if not llm_available():
@@ -186,11 +197,19 @@ def _generate_llm_insights(
 
 Output exactly 5 insights, one per line. No numbering, no bullets, just the insight text. Focus on the research topic "{query}" — not on AI technology unless the query is about AI."""
 
-    reply = chat_completion(
+    model = context.get("llm_model", config.LLM_MODEL)
+    api_key = context.get("openrouter_api_key")
+    reply, usage = chat_completion_with_usage(
         messages=[{"role": "user", "content": prompt}],
         max_tokens=500,
         temperature=0.3,
+        model=model,
+        api_key=api_key,
     )
+    if usage:
+        u = context.setdefault("llm_usage", {"prompt_tokens": 0, "completion_tokens": 0})
+        u["prompt_tokens"] += usage.get("prompt_tokens", 0)
+        u["completion_tokens"] += usage.get("completion_tokens", 0)
     if not reply:
         return []
 
@@ -207,7 +226,7 @@ Output exactly 5 insights, one per line. No numbering, no bullets, just the insi
 
 
 def _generate_llm_evidence_assessment(
-    query: str, claims: List[dict], fact_results: List[dict], web_results: List[dict]
+    query: str, claims: List[dict], fact_results: List[dict], web_results: List[dict], context: Dict[str, Any]
 ) -> str:
     """Use LLM to summarize evidence quality for the research topic."""
     if not llm_available() or not claims:
@@ -228,11 +247,20 @@ Top claims:
 
 Be specific about the topic "{query}". Do NOT mention RAG, embeddings, or AI technology unless the query is about those."""
 
-    return chat_completion(
+    model = context.get("llm_model", config.LLM_MODEL)
+    api_key = context.get("openrouter_api_key")
+    reply, usage = chat_completion_with_usage(
         messages=[{"role": "user", "content": prompt}],
         max_tokens=250,
         temperature=0.3,
-    ) or ""
+        model=model,
+        api_key=api_key,
+    )
+    if usage:
+        u = context.setdefault("llm_usage", {"prompt_tokens": 0, "completion_tokens": 0})
+        u["prompt_tokens"] += usage.get("prompt_tokens", 0)
+        u["completion_tokens"] += usage.get("completion_tokens", 0)
+    return reply or ""
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -255,6 +283,7 @@ def _build_report(
     retriever_output: dict,
     web_results: Optional[List[dict]] = None,
     llm_summary: str = "",
+    context: Optional[Dict[str, Any]] = None,
 ) -> str:
     """Assemble the full markdown report."""
     sections = []
@@ -342,7 +371,7 @@ def _build_report(
     sections.append("## Evidence Assessment\n")
 
     # Generate LLM-based evidence assessment if available
-    llm_evidence = _generate_llm_evidence_assessment(query, claims, fact_results, web_results)
+    llm_evidence = _generate_llm_evidence_assessment(query, claims, fact_results, web_results, context or {})
     if llm_evidence:
         sections.append(llm_evidence)
         sections.append("")
@@ -489,7 +518,7 @@ def _build_report(
         sections.append("- *No embedding sources cited.*")
     sections.append("")
 
-    sections.append("---\n*Report generated by Astraeus — Multi-Agent AI Deep Researcher*")
+    sections.append("---\n*Report generated by Astraeus 2.0 — Multi-Agent AI Deep Researcher*")
 
     return "\n".join(sections)
 
