@@ -16,3 +16,5 @@ weasyprint>=60.0
 xhtml2pdf>=0.2.13
 fastapi>=0.115.0
 uvicorn[standard]>=0.30.0
+python-multipart>=0.0.7
+python-multipart>=0.0.7
