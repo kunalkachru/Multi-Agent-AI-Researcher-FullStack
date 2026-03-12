@@ -1362,6 +1362,35 @@ body {
   margin: 0 0 12px;
   color: #e2e8f0;
 }
+.claims-verdict-donut {
+  margin-bottom: 16px;
+}
+.claims-donut-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto;
+}
+.claims-donut-center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.claims-donut-center-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+.claims-donut-center-label {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
 .embedding-space-chart,
 .waterfall-chart,
 .source-dist-chart {
@@ -1427,6 +1456,75 @@ body {
   border-radius: 6px;
   color: #e2e8f0;
   cursor: pointer;
+}
+.embedding-snippet-link {
+  color: #38bdf8;
+  text-decoration: none;
+}
+.embedding-snippet-link:hover {
+  text-decoration: underline;
+}
+.embedding-document-snippets {
+  margin-top: 16px;
+  font-size: 0.9rem;
+  color: #94a3b8;
+}
+.embedding-document-snippets summary {
+  cursor: pointer;
+  color: #cbd5e1;
+}
+.embedding-snippets-list {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.embedding-snippets-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.embedding-snippets-group strong {
+  font-size: 0.85rem;
+  color: #e2e8f0;
+}
+.embedding-snippet-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  font-size: 0.8rem;
+  color: #cbd5e1;
+}
+.embedding-snippet-row-score {
+  flex-shrink: 0;
+  font-weight: 600;
+  color: #94a3b8;
+  min-width: 48px;
+}
+.embedding-snippets-empty {
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+.embedding-jump-row {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.embedding-jump-label {
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+.embedding-jump-select {
+  flex: 1;
+  max-width: 320px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 8px;
+  color: #e2e8f0;
 }
 
 .claims-list {

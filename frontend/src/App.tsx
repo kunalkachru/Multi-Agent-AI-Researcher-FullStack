@@ -1099,21 +1099,21 @@ export const App = () => {
                               className={`rag-tab ${ragTab === "embedding" ? "rag-tab--active" : ""}`}
                               onClick={() => setRagTab("embedding")}
                             >
-                              Query vs sources
+                              🗺️ Embedding Space
                             </button>
                             <button
                               type="button"
                               className={`rag-tab ${ragTab === "waterfall" ? "rag-tab--active" : ""}`}
                               onClick={() => setRagTab("waterfall")}
                             >
-                              From query to sources
+                              🏗️ Retrieval Waterfall
                             </button>
                             <button
                               type="button"
                               className={`rag-tab ${ragTab === "claims" ? "rag-tab--active" : ""}`}
                               onClick={() => setRagTab("claims")}
                             >
-                              Claims & evidence
+                              ✅ Claims & Evidence
                             </button>
                           </div>
                           <div className="rag-tab-panel">

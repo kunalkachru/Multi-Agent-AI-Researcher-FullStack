@@ -7,6 +7,21 @@ interface RetrievalWaterfallVizProps {
 
 const STAGE_COLORS = ["#60a5fa", "#818cf8", "#a78bfa", "#22c55e"];
 
+const SOURCE_COLORS: Record<string, string> = {
+  arxiv: "#3b82f6",
+  blog: "#f59e0b",
+  documentation: "#22c55e",
+  news: "#a78bfa",
+  "web (Tavily)": "#ec4899",
+  web: "#ec4899",
+  government: "#14b8a6",
+  unknown: "#6b7280",
+};
+
+function getSourceColor(name: string): string {
+  return SOURCE_COLORS[name] ?? "#6b7280";
+}
+
 export function RetrievalWaterfallViz({ context }: RetrievalWaterfallVizProps) {
   const metadata = context?.retrieval_metadata;
   const stageCounts = metadata?.stage_counts;
@@ -16,7 +31,7 @@ export function RetrievalWaterfallViz({ context }: RetrievalWaterfallVizProps) {
     ? [
         { name: "Queries Sent", value: stageCounts.queries ?? 0 },
         { name: "Dense Candidates", value: stageCounts.dense_candidates ?? 0 },
-        { name: "After Re-rank", value: stageCounts.after_rerank ?? 0 },
+        { name: "After Re-ranking", value: stageCounts.after_rerank ?? 0 },
         { name: "Final Chunks", value: stageCounts.final_chunks ?? 0 },
       ].filter((s) => s.value >= 0)
     : [];
@@ -66,7 +81,7 @@ export function RetrievalWaterfallViz({ context }: RetrievalWaterfallVizProps) {
       </div>
       {sourceData.length > 0 && (
         <>
-          <h4>Results by source</h4>
+          <h4>Source Distribution</h4>
           <div className="source-dist-chart">
             <ResponsiveContainer width="100%" height={200}>
               <BarChart
@@ -81,7 +96,11 @@ export function RetrievalWaterfallViz({ context }: RetrievalWaterfallVizProps) {
                     {payload[0].payload.name}: {payload[0].value}
                   </div>
                 )} />
-                <Bar dataKey="count" fill="#a78bfa" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="count" name="Count" radius={[0, 4, 4, 0]}>
+                  {sourceData.map((entry, i) => (
+                    <Cell key={entry.name} fill={getSourceColor(entry.name)} />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
