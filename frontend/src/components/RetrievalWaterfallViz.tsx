@@ -49,6 +49,10 @@ export function RetrievalWaterfallViz({ context }: RetrievalWaterfallVizProps) {
   return (
     <div className="retrieval-waterfall-viz">
       <h3>From your queries to final sources</h3>
+      <p className="viz-description">
+        <strong>See how we narrowed down to your final sources.</strong>{" "}
+        We show how many items passed each step of the search pipeline, from all candidates down to the documents that actually powered your report.
+      </p>
       <div className="waterfall-chart">
         <ResponsiveContainer width="100%" height={280}>
           <BarChart

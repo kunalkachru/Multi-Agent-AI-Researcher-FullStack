@@ -1359,8 +1359,14 @@ body {
 .retrieval-waterfall-viz h3,
 .claims-evidence-viz h3 {
   font-size: 1rem;
-  margin: 0 0 12px;
+  margin: 0 0 8px;
   color: #e2e8f0;
+}
+.viz-description {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin: 0 0 12px;
+  max-width: 60ch;
 }
 .claims-verdict-donut {
   margin-bottom: 16px;
@@ -1772,6 +1778,9 @@ code {
   color: var(--color-text);
 }
 [data-theme="light"] .sidebar-model-cost-hint {
+  color: var(--color-text-muted);
+}
+[data-theme="light"] .viz-description {
   color: var(--color-text-muted);
 }
 [data-theme="light"] .report-preview,

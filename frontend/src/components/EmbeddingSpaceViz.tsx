@@ -119,6 +119,10 @@ export function EmbeddingSpaceViz({ context }: EmbeddingSpaceVizProps) {
   return (
     <div className="embedding-space-viz">
       <h3>Your question vs web results vs your documents</h3>
+      <p className="viz-description">
+        <strong>See where your question sits among web results and your documents.</strong>{" "}
+        Points that are closer together are more similar, so you can quickly spot which sources are most related to your question.
+      </p>
       <div className="embedding-space-chart">
         <ResponsiveContainer width="100%" height={400}>
           <ScatterChart margin={{ top: 16, right: 120, bottom: 24, left: 24 }}>

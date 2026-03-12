@@ -59,6 +59,10 @@ export function ClaimsEvidenceViz({ context }: ClaimsEvidenceVizProps) {
   return (
     <div className="claims-evidence-viz">
       <h3>Fact-check results</h3>
+      <p className="viz-description">
+        <strong>See which claims we trust and why.</strong>{" "}
+        The donut shows how many claims were verified or disputed, and the list below shows each claim&apos;s score, evidence type, and supporting sources.
+      </p>
       {donutData.length > 0 && (
         <div className="claims-verdict-donut">
           <div className="claims-donut-wrapper">
