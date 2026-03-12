@@ -18,7 +18,7 @@ services:
       context: .
       dockerfile: Dockerfile.frontend
       args:
-        VITE_API_BASE: "http://3.72.110.83:8765"
+        VITE_API_BASE: "${VITE_API_BASE:-http://localhost:8765}"
     container_name: astraeus-frontend
     depends_on:
       - api

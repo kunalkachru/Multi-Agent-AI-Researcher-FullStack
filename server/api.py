@@ -34,7 +34,7 @@ app = FastAPI(
 )
 
 # CORS configuration — allow local React dev (Vite may use 5173, 5174, etc. if port in use).
-origins = [
+_default_origins = [
     "http://localhost",
     "http://127.0.0.1",
     "http://localhost:5173",
@@ -46,6 +46,8 @@ origins = [
     "http://127.0.0.1:4173",
     "http://127.0.0.1:5175",
 ]
+_extra = __import__("os").getenv("ALLOWED_ORIGINS", "")
+origins = _default_origins + [o.strip() for o in _extra.split(",") if o.strip()]
 
 app.add_middleware(
     CORSMiddleware,

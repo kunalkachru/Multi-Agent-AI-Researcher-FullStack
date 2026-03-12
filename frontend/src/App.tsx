@@ -267,11 +267,12 @@ export const App = () => {
   const { data: runState, error: runError, isLoading: runLoading, isPolling } = usePipelineRun(runId);
 
   const lastHealthSuccessAt = useRef<number>(0);
+  const uploadingRef = useRef<boolean>(false); // ← CHANGED: track upload state in a ref accessible inside closures
 
   useEffect(() => {
     const check = () => {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 1200);
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
       getHealth(controller.signal)
         .then((res) => {
           lastHealthSuccessAt.current = Date.now();
@@ -279,6 +280,7 @@ export const App = () => {
           setApiError(null);
         })
         .catch(() => {
+          if (uploadingRef.current) return; // ← CHANGED: don't show disconnected while uploading
           lastHealthSuccessAt.current = 0;
           setHealth("Backend disconnected");
           setApiError("Could not reach Astraeus 2.0 API. Is the server running on port 8765?");
@@ -293,6 +295,7 @@ export const App = () => {
   useEffect(() => {
     const STALE_MS = 4000;
     const id = setInterval(() => {
+      if (uploadingRef.current) return; // ← CHANGED: don't mark stale while uploading
       if (lastHealthSuccessAt.current === 0) return;
       if (Date.now() - lastHealthSuccessAt.current > STALE_MS) {
         lastHealthSuccessAt.current = 0;
@@ -507,6 +510,7 @@ export const App = () => {
       const files = e.target.files;
       if (!files?.length) return;
 
+      uploadingRef.current = true; // ← CHANGED: set ref before upload starts
       setUploading(true);
       setUploadResult(null);
       setUploadStep(1);
@@ -530,6 +534,7 @@ export const App = () => {
           setUploadResult(`Upload failed. ${err instanceof Error ? err.message : String(err)} Try again or check file format (PDF, TXT, MD).`);
         })
         .finally(() => {
+          uploadingRef.current = false; // ← CHANGED: clear ref when upload finishes
           setUploading(false);
           e.target.value = "";
         });
