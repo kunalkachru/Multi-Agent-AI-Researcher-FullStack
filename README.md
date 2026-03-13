@@ -264,7 +264,31 @@ After a pipeline run, three visualizations appear:
 
 ## Key Files Reference
 
-- **Entry:** [app.py](app.py) — Session state, pipeline trigger, UI layout
-- **Orchestration:** [pipeline/orchestrator.py](pipeline/orchestrator.py) — `AGENT_REGISTRY`, `run_pipeline()`, `PipelineState`
-- **Vector store:** [rag/vector_store.py](rag/vector_store.py) — `index_documents()`, `query_store()`, `get_collection_count()`
-- **LLM:** [llm/openrouter_client.py](llm/openrouter_client.py) — `chat_completion()`, `is_available()`
+- **Streamlit entry (legacy UI):** [app.py](app.py)
+- **FastAPI API (React frontend):** [server/api.py](server/api.py)
+- **Pipeline orchestration:** [pipeline/orchestrator.py](pipeline/orchestrator.py), [pipeline/service.py](pipeline/service.py)
+- **Agents:** [agents/](agents/) — 6-agent research pipeline
+- **RAG stack:** [rag/](rag/) — document parsing, chunking, embeddings, vector store, retrieval, Tavily client
+- **LLM client:** [llm/openrouter_client.py](llm/openrouter_client.py)
+- **React app:** [frontend/src/App.tsx](frontend/src/App.tsx) and components under `frontend/src/components/`
+
+---
+
+## Further documentation (`docs/`)
+
+For more detailed, implementation-aligned documentation:
+
+- **Architecture:** [`docs/ARCHITECTURE_OVERVIEW.md`](docs/ARCHITECTURE_OVERVIEW.md)  
+  High-level overview of the FastAPI API, 6-agent pipeline, RAG stack, and React frontend, plus key request/response flows.
+
+- **Deployment:** [`docs/DEPLOYMENT_GUIDE.md`](docs/DEPLOYMENT_GUIDE.md) and [`docs/AWS_EC2_SETUP.md`](docs/AWS_EC2_SETUP.md)  
+  How to run Astraeus locally with Docker or manual dev, and how to deploy it to a Linux/EC2 VM with Docker Compose.
+
+- **RAG visualizations:** [`docs/RAG_VISUALIZATIONS_REACT.md`](docs/RAG_VISUALIZATIONS_REACT.md)  
+  How the Embedding Space, Retrieval Waterfall, and Claims & Evidence views work in the React “Sources” tab and which context fields they consume.
+
+- **UI copy & layout:** [`docs/UI_COPY_AND_LAYOUT.md`](docs/UI_COPY_AND_LAYOUT.md)  
+  Canonical reference for labels, headings, button text, and empty/error states in the current React UI.
+
+- **Sidebar keys & models:** [`docs/SIDEBAR_KEYS_AND_MODELS.md`](docs/SIDEBAR_KEYS_AND_MODELS.md)  
+  Details of sidebar behavior for embedding/LLM models, OpenRouter/Tavily keys, key testing, local key storage, and how “Start research” is gated.
