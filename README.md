@@ -35,6 +35,7 @@ Landing page: [`docs/index.html`](docs/index.html). Enable via **Settings → Pa
 | Completed report | [react-report-complete.png](assets/screenshots/react-report-complete.png) |
 | RAG visualizations | [react-rag-viz.png](assets/screenshots/react-rag-viz.png) |
 | Streamlit homepage | [streamlit-homepage.png](assets/screenshots/streamlit-homepage.png) |
+| Streamlit pipeline complete | [streamlit-result.png](assets/screenshots/streamlit-result.png) |
 
 ### React Frontend (primary)
 
@@ -53,7 +54,10 @@ Landing page: [`docs/index.html`](docs/index.html). Enable via **Settings → Pa
 ### Streamlit UI (legacy)
 
 ![Streamlit Homepage](assets/screenshots/streamlit-homepage.png)
-*Streamlit interface — alternative UI for the same 6-agent pipeline (port 8502 on EC2)*
+*Streamlit interface — query chips, settings, and 6-agent pipeline cards (captured from live EC2 deployment)*
+
+![Streamlit Pipeline Complete](assets/screenshots/streamlit-result.png)
+*Completed run — all 6 agents finished with elapsed time and status badges*
 
 ---
 
