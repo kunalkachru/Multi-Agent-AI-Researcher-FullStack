@@ -284,7 +284,11 @@ def start_run(request: Request, req: RunRequest) -> RunResponse:
     if search_type == "web_only":
         has_tavily = bool(
             (req.tavily_api_key and req.tavily_api_key.strip())
-            or (config.TAVILY_API_KEY and config.TAVILY_API_KEY.strip())
+            or (
+                not config.PUBLIC_DEMO_MODE
+                and config.TAVILY_API_KEY
+                and config.TAVILY_API_KEY.strip()
+            )
         )
         if not has_tavily:
             raise HTTPException(
@@ -292,11 +296,23 @@ def start_run(request: Request, req: RunRequest) -> RunResponse:
                 detail="Web search only requires a Tavily API key. Set TAVILY_API_KEY in .env or provide it in the request.",
             )
 
+    client_llm_key = (req.openrouter_api_key or "").strip()
+    if config.PUBLIC_DEMO_MODE:
+        if not client_llm_key:
+            raise HTTPException(
+                status_code=401,
+                detail="Public demo requires an OpenRouter API key in the request. Enter your key in the sidebar.",
+            )
+    elif not client_llm_key:
+        client_llm_key = None
+
+    client_tavily_key = (req.tavily_api_key or "").strip() or None
+
     run_id = start_pipeline_run(
         query=query,
         llm_model=req.llm_model,
-        openrouter_api_key=req.openrouter_api_key,
-        tavily_api_key=req.tavily_api_key,
+        openrouter_api_key=client_llm_key,
+        tavily_api_key=client_tavily_key,
         search_type=search_type,
     )
     return RunResponse(run_id=run_id)

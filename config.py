@@ -62,6 +62,10 @@ LLM_MODELS = [
 # ── Tavily (optional web search for research) ────────────────────────────
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
 
+# ── Public demo (EC2) ───────────────────────────────────────────────────
+# When true: POST /api/run must include openrouter_api_key; server .env key is ignored.
+PUBLIC_DEMO_MODE = os.getenv("PUBLIC_DEMO_MODE", "").lower() in ("1", "true", "yes")
+
 # ── Pipeline ──────────────────────────────────────────────────────────────
 MAX_QUERY_EXPANSIONS = int(os.getenv("MAX_QUERY_EXPANSIONS", "3"))
 TOP_K_RESULTS = int(os.getenv("TOP_K_RESULTS", "10"))
