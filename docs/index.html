@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Astraeus 2.0 — Multi-Agent AI Deep Researcher</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0b0f17;
+      --bg-card: #121826;
+      --bg-elevated: #1a2234;
+      --border: #2a3548;
+      --text: #e8edf7;
+      --muted: #94a3b8;
+      --accent: #6366f1;
+      --accent-hover: #818cf8;
+      --green: #22c55e;
+      --cyan: #06b6d4;
+      --amber: #f59e0b;
+      --pink: #ec4899;
+      --radius: 12px;
+      --shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Inter", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.18), transparent),
+        radial-gradient(ellipse 60% 40% at 100% 50%, rgba(6, 182, 212, 0.08), transparent);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 3rem 1.5rem 4rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--cyan);
+      background: rgba(6, 182, 212, 0.12);
+      border: 1px solid rgba(6, 182, 212, 0.25);
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      margin-bottom: 1rem;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.5rem;
+    }
+
+    .tagline {
+      font-size: 1.125rem;
+      color: var(--muted);
+      margin-bottom: 2rem;
+    }
+
+    .cta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.25rem;
+      border-radius: var(--radius);
+      font-weight: 600;
+      font-size: 0.95rem;
+      text-decoration: none;
+      transition: transform 0.15s, background 0.15s, border-color 0.15s;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      border: 1px solid transparent;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: var(--bg-elevated);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+
+    .btn-ghost:hover {
+      color: var(--text);
+      border-color: var(--muted);
+    }
+
+    section {
+      margin-bottom: 3rem;
+    }
+
+    h2 {
+      font-size: 1.35rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: var(--text);
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+    }
+
+    .pipeline {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem 0.25rem;
+      margin: 1rem 0;
+    }
+
+    .agent {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.6rem 0.85rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+      text-align: center;
+      min-width: 7rem;
+    }
+
+    .agent span {
+      display: block;
+      font-size: 0.65rem;
+      color: var(--muted);
+      font-weight: 400;
+      margin-bottom: 0.15rem;
+    }
+
+    .arrow {
+      color: var(--muted);
+      font-size: 1.1rem;
+      padding: 0 0.15rem;
+    }
+
+    ul.bullets {
+      list-style: none;
+      padding: 0;
+    }
+
+    ul.bullets li {
+      padding: 0.5rem 0 0.5rem 1.5rem;
+      position: relative;
+      color: var(--muted);
+    }
+
+    ul.bullets li::before {
+      content: "→";
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .stack {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .chip {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.75rem;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 0.35rem 0.65rem;
+      border-radius: 6px;
+    }
+
+    .screenshots {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+
+    .shot {
+      background: var(--bg-elevated);
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .shot img {
+      width: 100%;
+      height: 160px;
+      object-fit: cover;
+      object-position: top;
+      display: block;
+      background: #1e293b;
+    }
+
+    .shot figcaption {
+      padding: 0.75rem 1rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+  .links-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 0.75rem;
+    }
+
+    .link-card {
+      display: block;
+      padding: 1rem;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      text-decoration: none;
+      color: var(--text);
+      transition: border-color 0.15s;
+    }
+
+    .link-card:hover { border-color: var(--accent); }
+
+    .link-card strong { display: block; margin-bottom: 0.25rem; }
+    .link-card small { color: var(--muted); font-size: 0.8rem; }
+
+    footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="badge">Live on AWS EC2</div>
+      <h1>🔬 Astraeus 2.0</h1>
+      <p class="tagline">6 Agents · RAG-Powered · Autonomous Research Pipeline</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="http://100.59.118.49:4173" target="_blank" rel="noopener">Open React Demo</a>
+        <a class="btn btn-secondary" href="http://100.59.118.49:8501" target="_blank" rel="noopener">Open Streamlit UI</a>
+        <a class="btn btn-ghost" href="https://github.com/kunalkachru/Multi-Agent-AI-Researcher-FullStack" target="_blank" rel="noopener">View on GitHub</a>
+      </div>
+      <p style="font-size: 0.85rem; color: var(--muted);">
+        API health:
+        <a href="http://100.59.118.49:8765/api/health" target="_blank" rel="noopener" style="color: var(--cyan);">/api/health</a>
+      </p>
+    </header>
+
+    <section>
+      <h2>6-Agent Pipeline</h2>
+      <div class="card">
+        <p style="color: var(--muted); margin-bottom: 0.5rem;">
+          A research query flows through six specialized agents — query expansion, retrieval, analysis, fact-checking, insights, and report generation.
+        </p>
+        <div class="pipeline">
+          <div class="agent"><span>1</span>Coordinator</div>
+          <span class="arrow">→</span>
+          <div class="agent"><span>2</span>Retriever</div>
+          <span class="arrow">→</span>
+          <div class="agent"><span>3</span>Critical Analysis</div>
+          <span class="arrow">→</span>
+          <div class="agent"><span>4</span>Fact-Checker</div>
+          <span class="arrow">→</span>
+          <div class="agent"><span>5</span>Insight Generator</div>
+          <span class="arrow">→</span>
+          <div class="agent"><span>6</span>Report Builder</div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>How It Works</h2>
+      <div class="card">
+        <ul class="bullets">
+          <li>Enter a research question and optionally upload documents (.txt, .pdf, .docx) to index into a local vector store.</li>
+          <li>The coordinator expands your query; the retriever searches the vector DB and optional Tavily web results.</li>
+          <li>Agents extract claims, fact-check sources, synthesize insights, and produce a cited markdown report.</li>
+          <li>Explore results in the React UI (Summary + Sources visualizations) or the legacy Streamlit interface.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section>
+      <h2>Tech Stack</h2>
+      <div class="stack">
+        <span class="chip">Python</span>
+        <span class="chip">FastAPI</span>
+        <span class="chip">React</span>
+        <span class="chip">Streamlit</span>
+        <span class="chip">sentence-transformers</span>
+        <span class="chip">OpenRouter</span>
+        <span class="chip">Tavily</span>
+        <span class="chip">Docker</span>
+        <span class="chip">AWS EC2</span>
+      </div>
+    </section>
+
+    <section>
+      <h2>Screenshots</h2>
+      <div class="screenshots">
+        <figure class="shot">
+          <img src="assets/screenshots/react-homepage.png" alt="React homepage" onerror="this.style.display='none'" />
+          <figcaption>React frontend — research query entry</figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="assets/screenshots/react-pipeline-running.png" alt="Pipeline running" onerror="this.style.display='none'" />
+          <figcaption>Agent pipeline in progress</figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="assets/screenshots/react-report-complete.png" alt="Completed report" onerror="this.style.display='none'" />
+          <figcaption>Completed research report</figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="assets/screenshots/react-rag-viz.png" alt="RAG visualizations" onerror="this.style.display='none'" />
+          <figcaption>Sources tab — RAG visualizations</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section>
+      <h2>Documentation</h2>
+      <div class="links-grid">
+        <a class="link-card" href="https://github.com/kunalkachru/Multi-Agent-AI-Researcher-FullStack" target="_blank" rel="noopener">
+          <strong>GitHub Repository</strong>
+          <small>Source code, README, and setup</small>
+        </a>
+        <a class="link-card" href="http://100.59.118.49:4173" target="_blank" rel="noopener">
+          <strong>Live Demo (React)</strong>
+          <small>Primary UI on AWS</small>
+        </a>
+        <a class="link-card" href="AWS_EC2_SETUP.md">
+          <strong>AWS EC2 Setup Guide</strong>
+          <small>Deploy with Docker Compose</small>
+        </a>
+        <a class="link-card" href="ARCHITECTURE_OVERVIEW.md">
+          <strong>Architecture Overview</strong>
+          <small>API, pipeline, and frontend</small>
+        </a>
+      </div>
+    </section>
+
+    <footer>
+      Astraeus 2.0 · Multi-Agent RAG Researcher · Deployed with Docker on AWS EC2
+    </footer>
+  </div>
+</body>
+</html>

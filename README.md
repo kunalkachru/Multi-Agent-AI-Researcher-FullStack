@@ -4,6 +4,58 @@
 
 ---
 
+## 🚀 Live Demo
+
+| Interface | URL |
+|---|---|
+| React Frontend | http://100.59.118.49:4173 |
+| Streamlit UI | http://100.59.118.49:8501 |
+| API Health | http://100.59.118.49:8765/api/health |
+
+> Deployed on AWS EC2 (t3.small, Ubuntu 26.04 LTS) using Docker Compose.
+> 3 containers: React/Nginx frontend, FastAPI backend, Streamlit UI.
+
+### GitHub Pages
+
+A project landing page is available at `docs/index.html`. Enable it via **Settings → Pages → Deploy from branch → `main` → `/docs`**.
+
+---
+
+## Screenshots
+
+### React Frontend
+
+![Homepage](assets/screenshots/react-homepage.png)
+*React UI — enter a research query and launch the 6-agent pipeline*
+
+<!-- SCREENSHOT NEEDED: assets/screenshots/react-pipeline-running.png -->
+<!-- Capture: Open http://100.59.118.49:4173, run a query, screenshot while agents are in progress -->
+
+![Research in Progress](assets/screenshots/react-pipeline-running.png)
+*Agent pipeline running — live progress shown per agent*
+
+<!-- SCREENSHOT NEEDED: assets/screenshots/react-report-complete.png -->
+<!-- Capture: Open http://100.59.118.49:4173, complete a run, screenshot the Summary tab with report -->
+
+![Completed Report](assets/screenshots/react-report-complete.png)
+*Completed research report with citations and insights*
+
+<!-- SCREENSHOT NEEDED: assets/screenshots/react-rag-viz.png -->
+<!-- Capture: Open http://100.59.118.49:4173, complete a run, open Sources tab, screenshot RAG visualizations -->
+
+![RAG Visualizations](assets/screenshots/react-rag-viz.png)
+*Sources tab — Embedding Space, Retrieval Waterfall, Claims & Evidence*
+
+### Streamlit UI
+
+<!-- SCREENSHOT NEEDED: assets/screenshots/streamlit-homepage.png -->
+<!-- Capture: Open http://100.59.118.49:8501, screenshot the empty Streamlit homepage -->
+
+![Streamlit Homepage](assets/screenshots/streamlit-homepage.png)
+*Streamlit interface — alternative UI for the same 6-agent pipeline*
+
+---
+
 ## Project Overview
 
 **Astraeus 2.0** is a Streamlit-based multi-agent research application that runs a 6-agent RAG pipeline. A user enters a research query; the system expands it into multiple search queries, retrieves from a vector DB and optional web search (Tavily), extracts claims, fact-checks them, generates insights, and produces a final report with citations.

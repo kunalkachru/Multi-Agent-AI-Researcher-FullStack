@@ -66,7 +66,7 @@ This guide walks you through creating a Linux VM on AWS EC2 from scratch, then d
 
 ### 1.7 Storage
 
-- **Configure storage**: 20–30 GB **gp3** is enough to start. You can increase later.
+- **Configure storage**: **40 GB gp3** minimum recommended (see disk space note in Part 3). You can increase later if builds fail with “no space left on device”.
 
 ### 1.8 Launch
 
@@ -104,6 +104,26 @@ This guide walks you through creating a Linux VM on AWS EC2 from scratch, then d
 
 ---
 
+## Part 2b: Allocate an Elastic IP (recommended)
+
+The **auto-assigned public IP** changes every time you **Stop** and **Start** the instance. For a stable URL (e.g. for `.env` and sharing), attach an **Elastic IP**.
+
+1. In the EC2 console left menu, click **Elastic IPs** (under **Network & Security**).
+2. Click **Allocate Elastic IP address** → **Allocate**.
+3. Select the new address → **Actions** → **Associate Elastic IP address**.
+4. **Resource type:** Instance.
+5. **Instance:** select your Astraeus server (e.g. `astraeus-server`).
+6. **Private IP:** leave blank (uses the primary private IP).
+7. Click **Associate**.
+
+Use the **Elastic IP** as your `VM_PUBLIC_IP` in `.env` (`VITE_API_BASE`, `ALLOWED_ORIGINS`) and rebuild the frontend if you change it.
+
+**Cost:** Free while the Elastic IP is **associated with a running instance**. If you release it or leave it unattached, AWS may charge a small hourly fee.
+
+**Tip:** After stop/start, the Elastic IP stays the same; only the auto-assigned IP would have changed without this step.
+
+---
+
 ## Part 3: Install Docker and Docker Compose on the VM
 
 Run these on the VM (after SSH):
@@ -130,6 +150,39 @@ docker ps
 docker compose version
 ```
 
+### Disk space warning
+
+Docker images for this project are large:
+
+- The **API** image includes `sentence-transformers`, PyTorch, and related ML dependencies.
+- The **Streamlit** container also pulls in PyTorch (~3 GB layer).
+
+**Minimum recommended EBS root volume: 40 GB** (not 20 GB). If `docker compose build` fails with **no space left on device**:
+
+1. **AWS Console** → EC2 → **Volumes** → select the instance root volume → **Actions** → **Modify volume** → increase to **40 GB** or more → confirm.
+2. **SSH into the VM** and expand the filesystem (Ubuntu, typical NVMe root device):
+
+   ```bash
+   sudo growpart /dev/nvme0n1 1
+   sudo resize2fs /dev/nvme0n1p1
+   df -h /
+   ```
+
+   If your device name differs, run `lsblk` and adjust (`/dev/xvda1` on older instances).
+
+3. Free Docker cache:
+
+   ```bash
+   sudo docker system prune -af
+   ```
+
+4. Retry the build:
+
+   ```bash
+   cd ~/Multi-Agent-AI-Researcher-FullStack
+   sudo docker compose up -d --build
+   ```
+
 ---
 
 ## Part 4: Put your app on the VM
@@ -140,8 +193,8 @@ On the VM:
 
 ```bash
 sudo apt install -y git
-git clone https://github.com/YOUR_USERNAME/Astraeus-Multi-Agent-AI-Researcher.git
-cd Astraeus-Multi-Agent-AI-Researcher
+git clone https://github.com/kunalkachru/Multi-Agent-AI-Researcher-FullStack.git
+cd Multi-Agent-AI-Researcher-FullStack
 ```
 
 Replace the URL with your actual repo (HTTPS or SSH). If the repo is private, use a personal access token or deploy key.
@@ -221,11 +274,12 @@ If you don’t see the app:
 
 | Step            | Where    | Command / action |
 |-----------------|----------|-------------------|
-| Create VM       | AWS Console | EC2 → Launch instance (Ubuntu 22.04, t3.small, key pair, security group with 22, 80, 443, 8765, 4173, 8501) |
+| Create VM       | AWS Console | EC2 → Launch instance (Ubuntu 22.04+, t3.small, **40 GB** gp3, key pair, security group with 22, 80, 443, 8765, 4173, 8501) |
+| Elastic IP      | AWS Console | EC2 → Elastic IPs → Allocate → Associate to instance (stable public IP) |
 | Connect         | Laptop   | `ssh -i ~/.ssh/astraeus-key.pem ubuntu@<VM_IP>` |
 | Install Docker  | VM       | `curl -fsSL https://get.docker.com \| sudo sh` |
-| Get code        | VM       | `git clone <repo> && cd Astraeus-Multi-Agent-AI-Researcher` |
-| Add .env        | Laptop or VM | `scp .env ubuntu@<VM_IP>:~/.../` or create on VM |
+| Get code        | VM       | `git clone <repo> && cd Multi-Agent-AI-Researcher-FullStack` |
+| Add .env        | Laptop or VM | Set `VITE_API_BASE` + `ALLOWED_ORIGINS` to Elastic IP; `scp .env` or `nano .env` |
 | Run app         | VM       | `sudo docker compose up -d --build` |
 | Open app        | Browser  | `http://<VM_IP>:4173` |
 
