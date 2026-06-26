@@ -41,28 +41,19 @@ Landing page: [`docs/index.html`](docs/index.html). Enable via **Settings → Pa
 ![Homepage](assets/screenshots/react-homepage.png)
 *React UI — enter a research query and launch the 6-agent pipeline*
 
-<!-- SCREENSHOT NEEDED: replace placeholder at assets/screenshots/react-pipeline-running.png -->
-<!-- Capture: http://100.59.118.49:4173 — run a query, screenshot agent progress strip -->
-
 ![Research in Progress](assets/screenshots/react-pipeline-running.png)
 *Agent pipeline running — live progress shown per agent*
 
-<!-- SCREENSHOT NEEDED: assets/screenshots/react-report-complete.png -->
-
 ![Completed Report](assets/screenshots/react-report-complete.png)
 *Completed research report with citations and insights*
-
-<!-- SCREENSHOT NEEDED: assets/screenshots/react-rag-viz.png -->
 
 ![RAG Visualizations](assets/screenshots/react-rag-viz.png)
 *Sources tab — Embedding Space, Retrieval Waterfall, Claims & Evidence*
 
 ### Streamlit UI (legacy)
 
-<!-- SCREENSHOT NEEDED: assets/screenshots/streamlit-homepage.png — http://100.59.118.49:8502 -->
-
 ![Streamlit Homepage](assets/screenshots/streamlit-homepage.png)
-*Streamlit interface — alternative UI for the same 6-agent pipeline*
+*Streamlit interface — alternative UI for the same 6-agent pipeline (port 8502 on EC2)*
 
 ---
 
