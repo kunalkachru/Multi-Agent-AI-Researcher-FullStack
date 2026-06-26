@@ -59,7 +59,7 @@ This guide walks you through creating a Linux VM on AWS EC2 from scratch, then d
 | Custom TCP | 443         | Anywhere  | HTTPS          |
 | Custom TCP | 8765        | Anywhere  | Backend API (optional, for direct API access) |
 | Custom TCP | 4173        | Anywhere  | React frontend (optional) |
-| Custom TCP | 8501        | Anywhere  | Streamlit (optional) |
+| Custom TCP | 8502        | Anywhere  | Streamlit (host port; container 8501) |
 
 - **Source “My IP”**: use it for SSH so only your current IP can connect. For “Anywhere” AWS will show `0.0.0.0/0` (any internet IP). You can restrict 8765/4173/8501 to “My IP” later for security.
 5. Leave **Outbound** as default (all traffic allowed).
@@ -183,6 +183,17 @@ Docker images for this project are large:
    sudo docker compose up -d --build
    ```
 
+### Public deploy security (`.env`)
+
+On a **public** EC2 URL, add:
+
+```env
+CORS_STRICT=true
+ALLOWED_ORIGINS=http://<VM_PUBLIC_IP>:4173
+```
+
+Leave `OPENROUTER_API_KEY` empty so visitors use sidebar keys. A server-side key is not sent to the browser, but open `POST /api/run` can still **spend your credits** without rate limits being a full substitute.
+
 ---
 
 ## Part 4: Put your app on the VM
@@ -253,7 +264,7 @@ Press Ctrl+C to stop following logs.
 Use the VM’s **public IP** (or public DNS):
 
 - **React frontend**: `http://<VM_PUBLIC_IP>:4173`
-- **Streamlit** (if you started it): `http://<VM_PUBLIC_IP>:8501`
+- **Streamlit** (if you started it): `http://<VM_PUBLIC_IP>:8502` (default `docker-compose.yml` mapping)
 - **Backend health**: `http://<VM_PUBLIC_IP>:8765/api/health`
 
 If you don’t see the app:

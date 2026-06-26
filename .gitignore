@@ -7,6 +7,8 @@
 .env.local
 .env.production
 .env.*.local
+.env.backup
+.env.*.backup
 # NOTE: .env.example is safe to commit (contains no real keys)
 
 # ── Python ────────────────────────────────────────────────────

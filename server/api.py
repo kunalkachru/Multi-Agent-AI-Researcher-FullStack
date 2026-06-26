@@ -7,14 +7,24 @@ Thin HTTP layer exposing the 6-agent pipeline and context for use by
 external frontends (e.g. React) while keeping the existing Python core.
 """
 
+import os
 from typing import Any, List, Optional
 
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import PlainTextResponse, Response
+from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from pydantic import BaseModel
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
+from starlette.middleware.base import BaseHTTPMiddleware
 
 import config
+from server.security import (
+    MAX_REQUEST_BODY_BYTES,
+    UPLOAD_MAX_REQUEST_BODY_BYTES,
+    redact_context,
+)
 from llm import is_available as llm_available
 from pipeline.orchestrator import AgentState, PipelineState
 from pipeline.service import (
@@ -28,12 +38,16 @@ from rag.web_search import is_available as tavily_available
 from utils.pdf_export import markdown_to_pdf_bytes
 
 
+limiter = Limiter(key_func=get_remote_address)
+
 app = FastAPI(
     title="Astraeus 2.0 API",
     version="0.1.0",
 )
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# CORS configuration — allow local React dev (Vite may use 5173, 5174, etc. if port in use).
+# CORS — localhost defaults for dev; set CORS_STRICT=true on public EC2 deploy.
 _default_origins = [
     "http://localhost",
     "http://127.0.0.1",
@@ -46,8 +60,13 @@ _default_origins = [
     "http://127.0.0.1:4173",
     "http://127.0.0.1:5175",
 ]
-_extra = __import__("os").getenv("ALLOWED_ORIGINS", "")
-origins = _default_origins + [o.strip() for o in _extra.split(",") if o.strip()]
+_extra = os.getenv("ALLOWED_ORIGINS", "")
+_extra_origins = [o.strip() for o in _extra.split(",") if o.strip()]
+_cors_strict = os.getenv("CORS_STRICT", "").lower() in ("1", "true", "yes")
+if _cors_strict:
+    origins = _extra_origins or _default_origins
+else:
+    origins = _default_origins + _extra_origins
 
 app.add_middleware(
     CORSMiddleware,
@@ -57,9 +76,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+class LimitRequestSize(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        max_bytes = (
+            UPLOAD_MAX_REQUEST_BODY_BYTES
+            if request.url.path == "/api/uploads"
+            else MAX_REQUEST_BODY_BYTES
+        )
+        content_length = request.headers.get("content-length")
+        if content_length and int(content_length) > max_bytes:
+            return JSONResponse(
+                {"error": "Request too large"},
+                status_code=413,
+            )
+        return await call_next(request)
+
+
+app.add_middleware(LimitRequestSize)
+
 # So Hugging Face hub uses auth from .env and avoids "unauthenticated requests" warning
 if config.HF_TOKEN and config.HF_TOKEN.strip():
-    import os
     os.environ["HF_TOKEN"] = config.HF_TOKEN.strip()
 
 
@@ -217,21 +254,25 @@ def health() -> dict[str, str]:
 
 
 @app.post("/api/llm/test", response_model=LLMTestResponse)
-def test_llm_key(req: LLMTestRequest) -> LLMTestResponse:
+@limiter.limit("10/minute")
+def test_llm_key(request: Request, req: LLMTestRequest) -> LLMTestResponse:
     from llm import test_api_key
     ok, detail = test_api_key(req.api_key)
     return LLMTestResponse(ok=ok, detail=detail)
 
 
 @app.post("/api/tavily/test", response_model=TavilyTestResponse)
-def test_tavily_key_route(req: TavilyTestRequest) -> TavilyTestResponse:
+@limiter.limit("10/minute")
+def test_tavily_key_route(request: Request, req: TavilyTestRequest) -> TavilyTestResponse:
     from rag.web_search import test_tavily_key
     ok, detail = test_tavily_key(req.api_key)
     return TavilyTestResponse(ok=ok, detail=detail)
 
 
 @app.post("/api/run", response_model=RunResponse, status_code=201)
-def start_run(req: RunRequest) -> RunResponse:
+@limiter.limit("20/hour")
+@limiter.limit("5/minute")
+def start_run(request: Request, req: RunRequest) -> RunResponse:
     query = (req.query or "").strip()
     if not query:
         raise HTTPException(status_code=400, detail="Query must not be empty.")
@@ -274,7 +315,7 @@ def get_run_context(run_id: str) -> RunContextDTO:
     ctx = get_pipeline_context(run_id)
     if ctx is None:
         raise HTTPException(status_code=404, detail="Run not found.")
-    return RunContextDTO(data=ctx)
+    return RunContextDTO(data=redact_context(ctx))
 
 
 @app.get("/api/run/{run_id}/report/markdown", response_class=PlainTextResponse)
@@ -305,7 +346,8 @@ def get_run_report_pdf(run_id: str) -> Response:
 
 
 @app.post("/api/uploads", response_model=UploadResult)
-async def upload_documents(files: List[UploadFile] = File(...)) -> UploadResult:
+@limiter.limit("3/minute")
+async def upload_documents(request: Request, files: List[UploadFile] = File(...)) -> UploadResult:
     if not files:
         raise HTTPException(status_code=400, detail="No files uploaded.")
 
@@ -349,7 +391,8 @@ def _test_embedding_load(model_id: str, token: Optional[str]) -> tuple[bool, str
 
 
 @app.post("/api/embedding/test", response_model=EmbeddingTestResponse)
-def test_embedding(req: EmbeddingTestRequest) -> EmbeddingTestResponse:
+@limiter.limit("5/minute")
+def test_embedding(request: Request, req: EmbeddingTestRequest) -> EmbeddingTestResponse:
     from rag.embeddings import get_effective_embedding_model
     model_id = (req.model_id or "").strip() or get_effective_embedding_model()
     if not model_id:
@@ -359,7 +402,8 @@ def test_embedding(req: EmbeddingTestRequest) -> EmbeddingTestResponse:
 
 
 @app.post("/api/embedding/configure")
-def configure_embedding(req: EmbeddingConfigureRequest) -> dict[str, str]:
+@limiter.limit("5/minute")
+def configure_embedding(request: Request, req: EmbeddingConfigureRequest) -> dict[str, str]:
     from rag.embeddings import set_embedding_override
     model_id = (req.model_id or "").strip()
     if not model_id:

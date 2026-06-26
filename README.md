@@ -6,64 +6,88 @@
 
 ## 🚀 Live Demo
 
-| Interface | URL |
-|---|---|
-| React Frontend | http://100.59.118.49:4173 |
-| Streamlit UI | http://100.59.118.49:8501 |
-| API Health | http://100.59.118.49:8765/api/health |
+| Interface | URL | Notes |
+|---|---|---|
+| **React Frontend** (primary UI) | http://100.59.118.49:4173 | Recommended for demos |
+| Streamlit UI (legacy) | http://100.59.118.49:8502 | Same pipeline; default Docker host port is **8502** (maps to 8501 in container) |
+| API Health | http://100.59.118.49:8765/api/health | FastAPI backend |
 
-> Deployed on AWS EC2 (t3.small, Ubuntu 26.04 LTS) using Docker Compose.
-> 3 containers: React/Nginx frontend, FastAPI backend, Streamlit UI.
+> Deployed on AWS EC2 (t3.small, Ubuntu 26.04 LTS) using Docker Compose.  
+> Containers: **React/Nginx** frontend, **FastAPI** backend, optional **Streamlit** UI.
+
+### Two interfaces, one pipeline
+
+- **React + FastAPI** — primary UI for new users. Sidebar keys, Summary/Sources tabs, RAG visualizations, file uploads.
+- **Streamlit** (`app.py`) — legacy UI, same 6-agent pipeline, useful for quick experiments.
 
 ### GitHub Pages
 
-A project landing page is available at `docs/index.html`. Enable it via **Settings → Pages → Deploy from branch → `main` → `/docs`**.
+Landing page: [`docs/index.html`](docs/index.html). Enable via **Settings → Pages → Deploy from branch → `main` → `/docs`**.
 
 ---
 
 ## Screenshots
 
-### React Frontend
+| View | Preview |
+|------|---------|
+| React homepage | [react-homepage.png](assets/screenshots/react-homepage.png) |
+| Pipeline running | [react-pipeline-running.png](assets/screenshots/react-pipeline-running.png) |
+| Completed report | [react-report-complete.png](assets/screenshots/react-report-complete.png) |
+| RAG visualizations | [react-rag-viz.png](assets/screenshots/react-rag-viz.png) |
+| Streamlit homepage | [streamlit-homepage.png](assets/screenshots/streamlit-homepage.png) |
+
+### React Frontend (primary)
 
 ![Homepage](assets/screenshots/react-homepage.png)
 *React UI — enter a research query and launch the 6-agent pipeline*
 
-<!-- SCREENSHOT NEEDED: assets/screenshots/react-pipeline-running.png -->
-<!-- Capture: Open http://100.59.118.49:4173, run a query, screenshot while agents are in progress -->
+<!-- SCREENSHOT NEEDED: replace placeholder at assets/screenshots/react-pipeline-running.png -->
+<!-- Capture: http://100.59.118.49:4173 — run a query, screenshot agent progress strip -->
 
 ![Research in Progress](assets/screenshots/react-pipeline-running.png)
 *Agent pipeline running — live progress shown per agent*
 
 <!-- SCREENSHOT NEEDED: assets/screenshots/react-report-complete.png -->
-<!-- Capture: Open http://100.59.118.49:4173, complete a run, screenshot the Summary tab with report -->
 
 ![Completed Report](assets/screenshots/react-report-complete.png)
 *Completed research report with citations and insights*
 
 <!-- SCREENSHOT NEEDED: assets/screenshots/react-rag-viz.png -->
-<!-- Capture: Open http://100.59.118.49:4173, complete a run, open Sources tab, screenshot RAG visualizations -->
 
 ![RAG Visualizations](assets/screenshots/react-rag-viz.png)
 *Sources tab — Embedding Space, Retrieval Waterfall, Claims & Evidence*
 
-### Streamlit UI
+### Streamlit UI (legacy)
 
-<!-- SCREENSHOT NEEDED: assets/screenshots/streamlit-homepage.png -->
-<!-- Capture: Open http://100.59.118.49:8501, screenshot the empty Streamlit homepage -->
+<!-- SCREENSHOT NEEDED: assets/screenshots/streamlit-homepage.png — http://100.59.118.49:8502 -->
 
 ![Streamlit Homepage](assets/screenshots/streamlit-homepage.png)
 *Streamlit interface — alternative UI for the same 6-agent pipeline*
 
 ---
 
+## Public deployment & security
+
+If you share the live URL:
+
+1. **Do not put OpenRouter/Tavily keys in server `.env`** for a public demo — users enter keys in the React sidebar. A server-side key is **not exposed to the browser**, but anyone can call `POST /api/run` and **spend your credits** (see rate limits below).
+2. Set `CORS_STRICT=true` and `ALLOWED_ORIGINS=http://<your-ip>:4173` on EC2.
+3. OpenRouter **spending cap** ($3 or similar) is strongly recommended.
+4. API rate limits (per IP): **5 research runs/minute**, **20/hour** on `POST /api/run`.
+
+After pulling security updates on EC2: `git pull && sudo docker compose up -d --build api`
+
+---
+
 ## Project Overview
 
-**Astraeus 2.0** is a Streamlit-based multi-agent research application that runs a 6-agent RAG pipeline. A user enters a research query; the system expands it into multiple search queries, retrieves from a vector DB and optional web search (Tavily), extracts claims, fact-checks them, generates insights, and produces a final report with citations.
+**Astraeus 2.0** is a multi-agent RAG research application. The **React frontend** (via FastAPI) is the primary interface; a **Streamlit** UI remains available for the same 6-agent pipeline. A user enters a research query; the system expands it into multiple search queries, retrieves from a vector DB and optional web search (Tavily), extracts claims, fact-checks them, generates insights, and produces a final report with citations.
 
 - **What it does:** Autonomous research pipeline that answers queries using RAG (Retrieval-Augmented Generation)
-- **Tagline:** 6 Agents · RAG-Powered · Autonomous Research Pipeline
-- **Tech stack:** Python, Streamlit, sentence-transformers (local embeddings), OpenRouter (LLM), optional Tavily (web search)
-- **Vector store:** Lightweight NumPy-based implementation (no ChromaDB dependency) — stores embeddings in `./data/chroma_db/` as JSON + `.npy` files
+- **Primary UI:** React + FastAPI (`frontend/`, `server/`)
+- **Legacy UI:** Streamlit (`app.py`, `ui/`)
+- **Tech stack:** Python, FastAPI, React, Streamlit, sentence-transformers (local embeddings), OpenRouter (LLM), optional Tavily (web search)
+- **Vector store:** Lightweight NumPy-based implementation — stores embeddings in `./data/chroma_db/` as JSON + `.npy` files
 
 ---
 
